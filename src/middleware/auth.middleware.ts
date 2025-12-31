@@ -6,7 +6,7 @@ import type { AuthContext } from "../security/auth.types.js";
  * TEMP token parser.
  * Later this will move to security/token.ts
  */
-function parseAuthToken(authHeader?: string): AuthContext {
+function parseAuthHeader(authHeader?: string): AuthContext {
   if (!authHeader) {
     return { user: null, isAuthenticated: false };
   }
@@ -29,18 +29,13 @@ function parseAuthToken(authHeader?: string): AuthContext {
 }
 
 export const authMiddleware: MiddlewareFn = async (
-  { req, reply, routeMeta, auth },
+  { req, reply, routeMeta },
   next
 ) => {
-  const authRequirement = routeMeta?.auth ?? "none";
+  // Always initialize
+  req.auth = parseAuthHeader(req.headers.authorization);
 
-  const parsedAuth = parseAuthToken(req.headers.authorization);
-  auth = parsedAuth;
-
-  // Attach to request for downstream usage
-  (req as any).auth = parsedAuth;
-
-  if (authRequirement === "required" && !parsedAuth.isAuthenticated) {
+  if (routeMeta?.auth === "required" && !req.auth.isAuthenticated) {
     reply.code(401).send({
       code: "UNAUTHORIZED",
       message: "Authentication required"
@@ -49,9 +44,8 @@ export const authMiddleware: MiddlewareFn = async (
   }
 
   if (
-    parsedAuth.isAuthenticated &&
     routeMeta?.roles &&
-    !routeMeta.roles.some(r => parsedAuth.user?.roles.includes(r))
+    !routeMeta.roles.some(r => req.auth.user?.roles.includes(r))
   ) {
     reply.code(403).send({
       code: "FORBIDDEN",
@@ -62,3 +56,37 @@ export const authMiddleware: MiddlewareFn = async (
 
   await next();
 };
+// export const authMiddleware: MiddlewareFn = async (
+//   { req, reply, routeMeta, auth },
+//   next
+// ) => {
+//   const authRequirement = routeMeta?.auth ?? "none";
+
+//   const parsedAuth = parseAuthToken(req.headers.authorization);
+//   auth = parsedAuth;
+
+//   // Attach to request for downstream usage
+//   (req as any).auth = parsedAuth;
+
+//   if (authRequirement === "required" && !parsedAuth.isAuthenticated) {
+//     reply.code(401).send({
+//       code: "UNAUTHORIZED",
+//       message: "Authentication required"
+//     });
+//     return;
+//   }
+
+//   if (
+//     parsedAuth.isAuthenticated &&
+//     routeMeta?.roles &&
+//     !routeMeta.roles.some(r => parsedAuth.user?.roles.includes(r))
+//   ) {
+//     reply.code(403).send({
+//       code: "FORBIDDEN",
+//       message: "Insufficient permissions"
+//     });
+//     return;
+//   }
+
+//   await next();
+// };
