@@ -1,7 +1,7 @@
 // HTTP server startup & graceful shutdown
 import { buildApp } from "./app.js";
 
-const PORT = Number(process.env.PORT ?? 3000);
+const PORT = Number(process.env.PORT ?? 4000);
 
 async function start() {
   const app = await buildApp();

@@ -22,8 +22,13 @@ export async function registerRoutes(
       const runMiddleware = composeMiddleware([
         ...globalMiddleware,  // Global middleware
         authMiddleware, // Auth middleware
-        async ({ req, reply }) => { // Final route handler
-          await handler(req, reply);
+        async ({ req, reply }) => {
+          const result = await handler(req, reply);
+
+          // IMPORTANT: only send if not already sent
+          if (!reply.sent && result !== undefined) {
+            reply.send(result);
+          }
         }
       ]);
 
